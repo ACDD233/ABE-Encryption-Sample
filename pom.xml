@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.5</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>acdd.test</groupId>
+    <artifactId>firsttest</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>firsttest</name>
+    <description>firsttest</description>
+    <url/>
+    <licenses>
+        <license/>
+    </licenses>
+    <developers>
+        <developer/>
+    </developers>
+    <scm>
+        <connection/>
+        <developerConnection/>
+        <tag/>
+        <url/>
+    </scm>
+    <properties>
+        <java.version>21</java.version>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>jpbc-repository</id>
+            <url>https://oss.sonatype.org/content/groups/public/</url>
+        </repository>
+
+        <repository>
+            <id>scijava-public</id>
+            <url>https://maven.scijava.org/content/repositories/public/</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mariadb.jdbc</groupId>
+            <artifactId>mariadb-java-client</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <version>3.5.13</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.github.emilianobonassi.jpbc/jpbc-api -->
+        <dependency>
+            <groupId>com.github.emilianobonassi.jpbc</groupId>
+            <artifactId>jpbc-api</artifactId>
+            <version>2.0.0</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.github.stefano81.jpbc/jpbc-plaf -->
+        <dependency>
+            <groupId>com.github.stefano81.jpbc</groupId>
+            <artifactId>jpbc-plaf</artifactId>
+            <version>v2.0.0-m</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
