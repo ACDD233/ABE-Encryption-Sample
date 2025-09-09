@@ -32,13 +32,8 @@
 
     <repositories>
         <repository>
-            <id>jpbc-repository</id>
-            <url>https://oss.sonatype.org/content/groups/public/</url>
-        </repository>
-
-        <repository>
-            <id>scijava-public</id>
-            <url>https://maven.scijava.org/content/repositories/public/</url>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
         </repository>
     </repositories>
 
@@ -71,11 +66,11 @@
             <version>2.0.0</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/com.github.stefano81.jpbc/jpbc-plaf -->
+        <!-- https://mvnrepository.com/artifact/com.github.emilianobonassi.jpbc/jpbc-plaf -->
         <dependency>
-            <groupId>com.github.stefano81.jpbc</groupId>
+            <groupId>com.github.emilianobonassi.jpbc</groupId>
             <artifactId>jpbc-plaf</artifactId>
-            <version>v2.0.0-m</version>
+            <version>2.0.0</version>
         </dependency>
     </dependencies>
 
