@@ -38,4 +38,4 @@ build/
 ### Self ###
 usage/
 uploads/
-*.properties
+src/main/resources/application.properties
