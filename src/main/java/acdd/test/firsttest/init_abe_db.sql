@@ -5,6 +5,7 @@ USE abe_cloud_disk;
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     attributes TEXT, -- Store user attributes, such as "LEAD_ENGINEER,PROJECT_PHOENIX"
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
