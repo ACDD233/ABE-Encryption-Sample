@@ -33,5 +33,9 @@ build/
 
 ### VS Code ###
 .vscode/
-
 *.txt
+
+### Self ###
+usage/
+uploads/
+src/main/resources/application.properties

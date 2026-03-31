@@ -17,3 +17,7 @@ spring.servlet.multipart.max-request-size=50MB
 # File storage configuration
 # Please set the environment variable UPLOAD_DIR to the desired directory
 file.upload-dir=${UPLOAD_DIR:/tmp/uploads}
+
+# JWT Configuration
+# Please set the environment variable JWT_SECRET to a long, secure secret key
+jwt.secret=${JWT_SECRET:a-very-long-and-secure-secret-key-for-jwt-32-bytes}
