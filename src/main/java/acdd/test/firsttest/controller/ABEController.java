@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @RestController
@@ -43,6 +44,9 @@ public class ABEController {
 
     @Autowired
     private UserKeyMapper userKeyMapper;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -76,10 +80,18 @@ public class ABEController {
     public ResponseEntity<Map<String, Object>> uploadAndEncrypt(
             @RequestParam("file") MultipartFile file,
             @RequestParam("key") String base64Key,
-            @RequestParam("tags") String[] tags,
-            @RequestParam(value = "ownerId", defaultValue = "1") Integer ownerId) {
+            @RequestParam(value = "parentId", defaultValue = "0") Integer parentId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
         try {
+            Integer ownerId = getUserIdFromHeader(authHeader);
+            if (ownerId == null) return ResponseEntity.status(401).build();
+
+            // Automate policy assignment based on current user's attributes
+            User user = userService.getById(ownerId);
+            String userAttrStr = (user != null) ? user.getAttributes() : "";
+            String[] tags = (userAttrStr != null && !userAttrStr.isEmpty()) ? userAttrStr.split(",") : new String[0];
+
             byte[] symmetricKey = Base64.getDecoder().decode(base64Key);
             ABEService.HybridCiphertext hc = abeService.encryptFileHybrid(file.getBytes(), symmetricKey, tags);
 
@@ -97,7 +109,10 @@ public class ABEController {
             metadata.setFilename(file.getOriginalFilename());
             metadata.setFilePath(fullPath);
             metadata.setAesIv(hc.iv);
-            metadata.setPolicy(String.join(",", tags));
+            metadata.setPolicy(userAttrStr);
+            metadata.setIsDir(false);
+            metadata.setParentId(parentId);
+            metadata.setUploadTime(LocalDateTime.now());
 
             FileAbeData abeData = new FileAbeData();
             abeData.setEncryptedSessionKey(hc.abeEncryptedKey.encryptedSessionKey);
@@ -109,10 +124,48 @@ public class ABEController {
             Map<String, Object> res = new HashMap<>();
             res.put("fileId", metadata.getId());
             res.put("status", "success");
+            res.put("policyApplied", userAttrStr);
             return ResponseEntity.ok(res);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/list")
+    public ResponseEntity<List<FileMetadata>> listFiles(
+            @RequestParam(value = "parentId", defaultValue = "0") Integer parentId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Integer userId = getUserIdFromHeader(authHeader);
+        if (userId == null) return ResponseEntity.status(401).build();
+        return ResponseEntity.ok(fileService.listFiles(parentId, userId));
+    }
+
+    @PostMapping("/mkdir")
+    public ResponseEntity<Map<String, String>> createDirectory(
+            @RequestParam String name,
+            @RequestParam(value = "parentId", defaultValue = "0") Integer parentId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Integer userId = getUserIdFromHeader(authHeader);
+        if (userId == null) return ResponseEntity.status(401).build();
+
+        // Automatically use user's attributes as folder policy
+        User user = userService.getById(userId);
+        String userAttrStr = (user != null) ? user.getAttributes() : "";
+
+        fileService.createDirectory(name, parentId, userAttrStr, userId);
+        Map<String, String> res = new HashMap<>();
+        res.put("status", "success");
+        res.put("policyApplied", userAttrStr);
+        return ResponseEntity.ok(res);
+    }
+
+    private Integer getUserIdFromHeader(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
+        try {
+            return Integer.parseInt(jwtUtil.getUserIdFromToken(authHeader.substring(7)));
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -128,7 +181,7 @@ public class ABEController {
             Integer finalUserId = userIdParam;
             boolean isTokenAuth = false;
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                finalUserId = Integer.parseInt(JwtUtil.getUserIdFromToken(authHeader.substring(7)));
+                finalUserId = Integer.parseInt(jwtUtil.getUserIdFromToken(authHeader.substring(7)));
                 isTokenAuth = true;
             }
 

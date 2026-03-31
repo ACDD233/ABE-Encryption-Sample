@@ -245,4 +245,27 @@ public class ABEServiceImpl implements ABEService {
         if (recoveredKey == null) throw new RuntimeException("ABE Decryption failed.");
         return decryptAES(hc.aesEncryptedFile, recoveredKey, hc.iv);
     }
+
+    @Override
+    public boolean isPolicySatisfied(String policy, String userAttributesStr) {
+        if (policy == null || policy.isEmpty()) return true;
+        if (userAttributesStr == null || userAttributesStr.isEmpty()) return false;
+
+        String[] requiredAttributes = policy.split(",");
+        String[] userAttributes = userAttributesStr.split(",");
+        
+        for (String req : requiredAttributes) {
+            String trimmedReq = req.trim();
+            if (trimmedReq.isEmpty()) continue;
+            boolean found = false;
+            for (String userAttr : userAttributes) {
+                if (userAttr.trim().equals(trimmedReq)) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) return false;
+        }
+        return true;
+    }
 }

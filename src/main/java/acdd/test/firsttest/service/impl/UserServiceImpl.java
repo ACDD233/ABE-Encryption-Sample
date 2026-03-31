@@ -29,6 +29,9 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private ABEService abeService;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Override
@@ -66,7 +69,7 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Invalid email or password.");
         }
 
-        String token = JwtUtil.generateToken(user.getId().toString(), user.getUsername());
+        String token = jwtUtil.generateToken(user.getId().toString(), user.getUsername());
 
         Map<String, Object> result = new HashMap<>();
         result.put("userId", user.getId());

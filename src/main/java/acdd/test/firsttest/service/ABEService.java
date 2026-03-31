@@ -1,9 +1,7 @@
 package acdd.test.firsttest.service;
 
 import it.unisa.dia.gas.jpbc.Element;
-import it.unisa.dia.gas.jpbc.Pairing;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -64,4 +62,7 @@ public interface ABEService {
     byte[] decryptAES(byte[] encryptedData, byte[] key, byte[] iv) throws Exception;
     HybridCiphertext encryptFileHybrid(byte[] fileBytes, byte[] symmetricKey, String[] policy) throws Exception;
     byte[] decryptFileHybrid(HybridCiphertext hc, String[] userAttributes) throws Exception;
+    
+    // Check if the user attributes satisfy the policy
+    boolean isPolicySatisfied(String policy, String userAttributes);
 }
