@@ -179,6 +179,32 @@ public class ABEController {
         }
     }
 
+    @PostMapping("/move")
+    public ResponseEntity<Map<String, String>> moveItem(
+            @RequestParam Integer id,
+            @RequestParam Integer targetParentId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Integer userId = getUserIdFromHeader(authHeader);
+        if (userId == null) return ResponseEntity.status(401).build();
+        fileService.moveItem(id, targetParentId, userId);
+        Map<String, String> res = new HashMap<>();
+        res.put("status", "success");
+        return ResponseEntity.ok(res);
+    }
+
+    @PostMapping("/copy")
+    public ResponseEntity<Map<String, String>> copyItem(
+            @RequestParam Integer id,
+            @RequestParam Integer targetParentId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Integer userId = getUserIdFromHeader(authHeader);
+        if (userId == null) return ResponseEntity.status(401).build();
+        fileService.copyItem(id, targetParentId, userId);
+        Map<String, String> res = new HashMap<>();
+        res.put("status", "success");
+        return ResponseEntity.ok(res);
+    }
+
     private Integer getUserIdFromHeader(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
         try {

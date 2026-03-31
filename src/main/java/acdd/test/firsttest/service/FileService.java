@@ -15,4 +15,8 @@ public interface FileService {
     
     // Delete file or directory
     void deleteItem(Integer id, Integer userId);
+
+    // Move and Copy
+    void moveItem(Integer id, Integer targetParentId, Integer userId);
+    void copyItem(Integer id, Integer targetParentId, Integer userId);
 }
