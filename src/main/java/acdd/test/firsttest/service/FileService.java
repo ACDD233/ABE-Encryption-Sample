@@ -12,4 +12,7 @@ public interface FileService {
     // New methods for directory support
     void createDirectory(String name, Integer parentId, String policy, Integer ownerId);
     List<FileMetadata> listFiles(Integer parentId, Integer userId);
+    
+    // Delete file or directory
+    void deleteItem(Integer id, Integer userId);
 }

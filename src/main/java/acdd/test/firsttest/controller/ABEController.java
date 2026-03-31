@@ -98,7 +98,7 @@ public class ABEController {
             File dir = new File(uploadDir);
             if (!dir.exists()) dir.mkdirs();
 
-            String uniqueFileName = UUID.randomUUID().toString() + ".enc";
+            String uniqueFileName = UUID.randomUUID() + ".enc";
             String fullPath = Paths.get(uploadDir, uniqueFileName).toString();
             try (FileOutputStream fos = new FileOutputStream(fullPath)) {
                 fos.write(hc.aesEncryptedFile);
@@ -158,6 +158,25 @@ public class ABEController {
         res.put("status", "success");
         res.put("policyApplied", userAttrStr);
         return ResponseEntity.ok(res);
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Map<String, String>> deleteItem(
+            @PathVariable Integer id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Integer userId = getUserIdFromHeader(authHeader);
+        if (userId == null) return ResponseEntity.status(401).build();
+
+        try {
+            fileService.deleteItem(id, userId);
+            Map<String, String> res = new HashMap<>();
+            res.put("status", "success");
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            Map<String, String> res = new HashMap<>();
+            res.put("error", e.getMessage());
+            return ResponseEntity.status(403).body(res);
+        }
     }
 
     private Integer getUserIdFromHeader(String authHeader) {

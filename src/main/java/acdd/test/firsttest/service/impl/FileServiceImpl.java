@@ -13,6 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -87,5 +90,41 @@ public class FileServiceImpl implements FileService {
         return allItems.stream()
                 .filter(item -> abeService.isPolicySatisfied(item.getPolicy(), userAttributes))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void deleteItem(Integer id, Integer userId) {
+        FileMetadata item = fileMetadataMapper.selectById(id);
+        if (item == null) return;
+
+        // Security Check: Only the owner can delete
+        if (!item.getOwnerId().equals(userId)) {
+            throw new RuntimeException("Unauthorized: You are not the owner of this file/folder.");
+        }
+
+        if (Boolean.TRUE.equals(item.getIsDir())) {
+            // Find children
+            QueryWrapper<FileMetadata> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("parent_id", id);
+            List<FileMetadata> children = fileMetadataMapper.selectList(queryWrapper);
+            
+            // Delete all children recursively
+            for (FileMetadata child : children) {
+                deleteItem(child.getId(), userId);
+            }
+        } else {
+            // Delete actual file from disk
+            try {
+                if (item.getFilePath() != null && !item.getFilePath().isEmpty()) {
+                    Files.deleteIfExists(Paths.get(item.getFilePath()));
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        
+        // Delete from database
+        fileMetadataMapper.deleteById(id);
     }
 }
