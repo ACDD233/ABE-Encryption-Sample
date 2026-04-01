@@ -28,6 +28,7 @@
     </scm>
     <properties>
         <java.version>21</java.version>
+        <maven.compiler.release>21</maven.compiler.release>
         <!-- Manually overriding vulnerable transitive dependencies -->
         <jjwt.version>0.13.0</jjwt.version>
         <mybatis-plus.version>3.5.16</mybatis-plus.version>

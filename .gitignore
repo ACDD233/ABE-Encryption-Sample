@@ -39,3 +39,4 @@ build/
 usage/
 uploads/
 src/main/resources/application.properties
+*.log
