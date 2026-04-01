@@ -1,5 +1,7 @@
 package acdd.test.firsttest.service.impl;
 
+import acdd.test.firsttest.entity.SystemKey;
+import acdd.test.firsttest.mapper.SystemKeyMapper;
 import acdd.test.firsttest.service.ABEService;
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.Pairing;
@@ -9,7 +11,6 @@ import it.unisa.dia.gas.plaf.jpbc.pairing.a.TypeACurveGenerator;
 import it.unisa.dia.gas.plaf.jpbc.pairing.parameters.PropertiesParameters;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Cipher;
@@ -19,7 +20,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -31,29 +31,18 @@ public class ABEServiceImpl implements ABEService {
     private ABEKeys globalKeys;
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private SystemKeyMapper systemKeyMapper;
 
     @PostConstruct
     public void init() {
         try {
-            List<SystemKeyData> results = jdbcTemplate.query(
-                    "SELECT params, g, pk_h, pk_egg_alpha, msk_beta, msk_alpha FROM system_keys WHERE id = 1",
-                    (rs, rowNum) -> {
-                        SystemKeyData data = new SystemKeyData();
-                        data.params = rs.getString("params");
-                        data.g = rs.getBytes("g");
-                        data.pk_h = rs.getBytes("pk_h");
-                        data.pk_egg_alpha = rs.getBytes("pk_egg_alpha");
-                        data.msk_beta = rs.getBytes("msk_beta");
-                        data.msk_alpha = rs.getBytes("msk_alpha");
-                        return data;
-                    });
+            SystemKey data = systemKeyMapper.selectById(1);
 
-            if (results.isEmpty()) {
+            if (data == null) {
                 this.globalKeys = setup();
                 saveKeysToDb(this.globalKeys);
             } else {
-                loadKeysFromData(results.get(0));
+                loadKeysFromData(data);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -61,36 +50,28 @@ public class ABEServiceImpl implements ABEService {
     }
 
     private void saveKeysToDb(ABEKeys keys) {
-        jdbcTemplate.update(
-                "INSERT INTO system_keys (id, params, g, pk_h, pk_egg_alpha, msk_beta, msk_alpha) VALUES (1, ?, ?, ?, ?, ?, ?)",
-                this.pairingParameters.toString(),
-                this.g.toBytes(),
-                keys.h.toBytes(),
-                keys.egg_alpha.toBytes(),
-                keys.beta.toBytes(),
-                keys.alpha.toBytes()
-        );
+        SystemKey systemKey = new SystemKey();
+        systemKey.setId(1);
+        systemKey.setParams(this.pairingParameters.toString());
+        systemKey.setG(this.g.toBytes());
+        systemKey.setPkH(keys.h.toBytes());
+        systemKey.setPkEggAlpha(keys.egg_alpha.toBytes());
+        systemKey.setMskBeta(keys.beta.toBytes());
+        systemKey.setMskAlpha(keys.alpha.toBytes());
+        
+        systemKeyMapper.insert(systemKey);
     }
 
-    private void loadKeysFromData(SystemKeyData data) {
-        this.pairingParameters = new PropertiesParameters().load(new java.io.ByteArrayInputStream(data.params.getBytes(StandardCharsets.UTF_8)));
+    private void loadKeysFromData(SystemKey data) {
+        this.pairingParameters = new PropertiesParameters().load(new java.io.ByteArrayInputStream(data.getParams().getBytes(StandardCharsets.UTF_8)));
         this.pairing = PairingFactory.getPairing(this.pairingParameters);
-        this.g = pairing.getG1().newElementFromBytes(data.g).getImmutable();
+        this.g = pairing.getG1().newElementFromBytes(data.getG()).getImmutable();
 
         this.globalKeys = new ABEKeys();
-        this.globalKeys.h = pairing.getG1().newElementFromBytes(data.pk_h).getImmutable();
-        this.globalKeys.egg_alpha = pairing.getGT().newElementFromBytes(data.pk_egg_alpha).getImmutable();
-        this.globalKeys.beta = pairing.getZr().newElementFromBytes(data.msk_beta).getImmutable();
-        this.globalKeys.alpha = pairing.getZr().newElementFromBytes(data.msk_alpha).getImmutable();
-    }
-
-    private static class SystemKeyData {
-        String params;
-        byte[] g;
-        byte[] pk_h;
-        byte[] pk_egg_alpha;
-        byte[] msk_beta;
-        byte[] msk_alpha;
+        this.globalKeys.h = pairing.getG1().newElementFromBytes(data.getPkH()).getImmutable();
+        this.globalKeys.egg_alpha = pairing.getGT().newElementFromBytes(data.getPkEggAlpha()).getImmutable();
+        this.globalKeys.beta = pairing.getZr().newElementFromBytes(data.getMskBeta()).getImmutable();
+        this.globalKeys.alpha = pairing.getZr().newElementFromBytes(data.getMskAlpha()).getImmutable();
     }
 
     @Override
