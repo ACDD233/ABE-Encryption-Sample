@@ -1,7 +1,6 @@
 package acdd.test.firsttest.common.util;
 
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 
@@ -14,27 +13,27 @@ public class JwtUtil {
     private final SecretKey secretKey;
     private static final long EXPIRATION_TIME = 86400000; // 24 hours
 
-    // Generate a secure random key on every system startup
     public JwtUtil() {
-        this.secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+        // Updated for JJWT 0.12.x: Use standard HS256 key generation
+        this.secretKey = Jwts.SIG.HS256.key().build();
     }
 
     public String generateToken(String userId, String username) {
         return Jwts.builder()
-                .setSubject(userId)
+                .subject(userId)
                 .claim("username", username)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .signWith(secretKey, SignatureAlgorithm.HS256)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .signWith(secretKey) // Algorithm inferred from key
                 .compact();
     }
 
     public String getUserIdFromToken(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(secretKey)
+        return Jwts.parser()
+                .verifyWith(secretKey)
                 .build()
-                .parseClaimsJws(token)
-                .getBody()
+                .parseSignedClaims(token)
+                .getPayload()
                 .getSubject();
     }
 
