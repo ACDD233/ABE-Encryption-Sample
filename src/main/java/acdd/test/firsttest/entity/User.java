@@ -13,7 +13,16 @@ public class User {
     private String email;
     private String passwordHash;
     private String attributes;
+    private String role; // "USER" or "ADMIN"
     private LocalDateTime createdAt;
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
 
     public Integer getId() {
         return id;

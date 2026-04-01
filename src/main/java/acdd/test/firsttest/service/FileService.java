@@ -19,4 +19,10 @@ public interface FileService {
     // Move and Copy
     void moveItem(Integer id, Integer targetParentId, Integer userId);
     void copyItem(Integer id, Integer targetParentId, Integer userId);
+
+    // Share
+    void shareFile(Integer fileId, String targetPolicy, Integer userId);
+
+    // Update Policy (for folders)
+    void updateItemPolicy(Integer id, String newTags, Integer userId);
 }
