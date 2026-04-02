@@ -5,14 +5,14 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.5</version>
+        <version>3.5.13</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>acdd.test</groupId>
-    <artifactId>firsttest</artifactId>
+    <groupId>com.abe</groupId>
+    <artifactId>clouddisk</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>firsttest</name>
-    <description>firsttest</description>
+    <name>clouddisk</name>
+    <description>clouddisk</description>
     <url/>
     <licenses>
         <license/>
@@ -28,6 +28,11 @@
     </scm>
     <properties>
         <java.version>21</java.version>
+        <maven.compiler.release>21</maven.compiler.release>
+        <!-- Manually overriding vulnerable transitive dependencies -->
+        <jjwt.version>0.13.0</jjwt.version>
+        <mybatis-plus.version>3.5.16</mybatis-plus.version>
+        <logback.version>1.5.32</logback.version>
     </properties>
 
     <repositories>
@@ -52,6 +57,7 @@
         <dependency>
             <groupId>org.mariadb.jdbc</groupId>
             <artifactId>mariadb-java-client</artifactId>
+            <version>3.5.7</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -62,7 +68,7 @@
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
-            <version>3.5.13</version>
+            <version>${mybatis-plus.version}</version>
         </dependency>
 
         <dependency>
@@ -73,29 +79,27 @@
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>0.11.5</version>
+            <version>${jjwt.version}</version>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
-            <version>0.11.5</version>
+            <version>${jjwt.version}</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
-            <version>0.11.5</version>
+            <version>${jjwt.version}</version>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/com.github.emilianobonassi.jpbc/jpbc-api -->
+        <!-- ABE Libraries -->
         <dependency>
             <groupId>com.github.emilianobonassi.jpbc</groupId>
             <artifactId>jpbc-api</artifactId>
             <version>2.0.0</version>
         </dependency>
-
-        <!-- https://mvnrepository.com/artifact/com.github.emilianobonassi.jpbc/jpbc-plaf -->
         <dependency>
             <groupId>com.github.emilianobonassi.jpbc</groupId>
             <artifactId>jpbc-plaf</artifactId>

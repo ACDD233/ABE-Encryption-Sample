@@ -1,0 +1,49 @@
+services:
+  mariadb:
+    build:
+      context: .
+      dockerfile: MariaDB.Dockerfile
+    container_name: abe_mariadb
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost --password='$$MARIADB_ROOT_PASSWORD' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      network: host
+    container_name: abe_app
+    restart: always
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      # Configure Spring Boot to connect to the mariadb container
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://mariadb:3306/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+      - DB_USERNAME=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - UPLOAD_DIR=${UPLOAD_DIR}
+      - JWT_SECRET=${JWT_SECRET}
+    volumes:
+      # Use a named volume for uploads to ensure portability and correct permissions across all OS
+      - uploads_data:/app/uploads
+
+volumes:
+  mariadb_data:
+  uploads_data:
