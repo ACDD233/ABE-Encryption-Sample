@@ -8,11 +8,11 @@
         <version>3.5.13</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>acdd.test</groupId>
-    <artifactId>firsttest</artifactId>
+    <groupId>com.abe</groupId>
+    <artifactId>clouddisk</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>firsttest</name>
-    <description>firsttest</description>
+    <name>clouddisk</name>
+    <description>clouddisk</description>
     <url/>
     <licenses>
         <license/>

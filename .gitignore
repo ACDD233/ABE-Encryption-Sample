@@ -35,6 +35,11 @@ build/
 .vscode/
 *.txt
 
+### Docker ###
+.env
+uploads_data/
+mariadb_data/
+
 ### Self ###
 usage/
 uploads/

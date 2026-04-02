@@ -1,4 +1,4 @@
-spring.application.name=firsttest
+spring.application.name=clouddisk
 
 # MariaDB Connection Configuration
 spring.datasource.url=jdbc:mariadb://localhost:3306/abe_cloud_disk?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
