@@ -105,6 +105,7 @@ public class UserServiceImpl implements UserService {
         result.put("userId", user.getId());
         result.put("username", user.getUsername());
         result.put("role", user.getRole());
+        result.put("attributes", user.getAttributes());
         result.put("token", token);
         return result;
     }

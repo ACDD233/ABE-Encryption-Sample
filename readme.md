@@ -1,4 +1,4 @@
-# ABE Network Storage
+# ABE Cloud Storage
 
 A secure cloud storage backend implementing **Attribute-Based Encryption (ABE)** and **Hybrid Encryption** (AES + ABE) using Spring Boot, MariaDB, and the JPBC library.
 
