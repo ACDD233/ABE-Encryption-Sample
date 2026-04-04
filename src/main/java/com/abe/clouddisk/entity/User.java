@@ -3,13 +3,19 @@ package com.abe.clouddisk.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 
 /**
  * Entity representing a system user.
  */
+@Setter
+@Getter
 @TableName("users")
 public class User {
+
     /**
      * The unique identifier for the user.
      */
@@ -46,115 +52,4 @@ public class User {
      */
     private LocalDateTime createdAt;
 
-    /**
-     * Returns the user's role.
-     * @return the role
-     */
-    public String getRole() {
-        return role;
-    }
-
-    /**
-     * Sets the user's role.
-     * @param role the role to set
-     */
-    public void setRole(String role) {
-        this.role = role;
-    }
-
-    /**
-     * Returns the user ID.
-     * @return the ID
-     */
-    public Integer getId() {
-        return id;
-    }
-
-    /**
-     * Sets the user ID.
-     * @param id the ID to set
-     */
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    /**
-     * Returns the username.
-     * @return the username
-     */
-    public String getUsername() {
-        return username;
-    }
-
-    /**
-     * Sets the username.
-     * @param username the username to set
-     */
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    /**
-     * Returns the email address.
-     * @return the email
-     */
-    public String getEmail() {
-        return email;
-    }
-
-    /**
-     * Sets the email address.
-     * @param email the email to set
-     */
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    /**
-     * Returns the hashed password.
-     * @return the password hash
-     */
-    public String getPasswordHash() {
-        return passwordHash;
-    }
-
-    /**
-     * Sets the hashed password.
-     * @param passwordHash the password hash to set
-     */
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
-    }
-
-    /**
-     * Returns the user's ABE attributes.
-     * @return the attributes string
-     */
-    public String getAttributes() {
-        return attributes;
-    }
-
-    /**
-     * Sets the user's ABE attributes.
-     * @param attributes the attributes string to set
-     */
-    public void setAttributes(String attributes) {
-        this.attributes = attributes;
-    }
-
-    /**
-     * Returns the creation timestamp.
-     * @return the creation timestamp
-     */
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    /**
-     * Sets the creation timestamp.
-     * @param createdAt the creation timestamp to set
-     */
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
 }

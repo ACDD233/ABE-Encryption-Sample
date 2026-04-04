@@ -1,6 +1,7 @@
 package com.abe.clouddisk.common.util;
 
 import io.jsonwebtoken.Jwts;
+import lombok.Getter;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -9,6 +10,7 @@ import java.util.Date;
 /**
  * Utility class for JSON Web Token (JWT) generation and validation.
  */
+@Getter
 @Component
 public class JwtUtil {
     
@@ -62,12 +64,4 @@ public class JwtUtil {
                 .getSubject();
     }
 
-    /**
-     * Returns the secret key used for JWT operations.
-     *
-     * @return the secret key
-     */
-    public SecretKey getSecretKey() {
-        return secretKey;
-    }
 }
