@@ -29,8 +29,9 @@
   {
     "token": "eyJhbGci...",
     "username": "SuperAdmin",
-    "id": 1,
-    "role": "ADMIN"
+    "userId": 1,
+    "role": "ADMIN",
+    "attributes": "ID:USER-uuid,Dep:Finance"
   }
   ```
 
