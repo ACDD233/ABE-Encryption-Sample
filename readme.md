@@ -29,7 +29,7 @@ Create a `.env` file in the root directory. You can use the following template (
 DB_ROOT_PASSWORD={Your MariaDB Root Password}
 DB_NAME=abe_cloud_disk
 DB_USER=abe_user
-DB_PASSWORD=h6Th5fA={Your MariaDB User Password}
+DB_PASSWORD={Your MariaDB User Password}
 
 # JWT Configuration (Optional)
 JWT_SECRET=
@@ -79,6 +79,13 @@ Upon successful startup, the system initializes a default admin:
 - **Automatic DB Init**: The `MariaDB.Dockerfile` bakes the `init.sql` into a custom image, resolving permission issues often found with volume-mounted scripts.
 - **Security**: The application runs under a non-privileged user (`abeuser`) inside the container.
 - **Portability**: Uses Docker **Named Volumes** (`uploads_data` and `mariadb_data`) to handle file permissions automatically across different operating systems.
+
+## Core Dependencies
+
+This project relies on the following key open-source library for its cryptographic operations:
+
+- **[JPBC (Java Pairing-Based Cryptography)](https://github.com/emilianobonassi/jpbc)**: The foundational library for bilinear pairings required by Attribute-Based Encryption (ABE). 
+  *Note: Since the original research website is no longer active, we use the reliable [emilianobonassi/jpbc](https://github.com/emilianobonassi/jpbc) implementation via JitPack.*
 
 ## API Reference
 Detailed documentation on endpoints, parameters, and logic:
