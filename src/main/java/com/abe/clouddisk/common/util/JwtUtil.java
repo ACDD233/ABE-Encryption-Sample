@@ -1,7 +1,13 @@
 package com.abe.clouddisk.common.util;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -10,6 +16,7 @@ import java.util.Date;
 /**
  * Utility class for JSON Web Token (JWT) generation and validation.
  */
+@Slf4j
 @Getter
 @Component
 public class JwtUtil {
@@ -53,15 +60,30 @@ public class JwtUtil {
      * Extracts the user ID from the specified JWT token.
      *
      * @param token the JWT token to parse
-     * @return the user ID extracted from the token
+     * @return the user ID extracted from the token, or null if validation fails
      */
     public String getUserIdFromToken(String token) {
-        return Jwts.parser()
-                .verifyWith(secretKey)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
+        try {
+            return Jwts.parser()
+                    .verifyWith(secretKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload()
+                    .getSubject();
+        } catch (ExpiredJwtException e) {
+            log.warn("JWT token has expired: {}", e.getMessage());
+        } catch (SignatureException e) {
+            log.warn("JWT signature validation failed: {}", e.getMessage());
+        } catch (MalformedJwtException e) {
+            log.warn("Invalid JWT token format: {}", e.getMessage());
+        } catch (UnsupportedJwtException e) {
+            log.warn("Unsupported JWT token: {}", e.getMessage());
+        } catch (IllegalArgumentException e) {
+            log.warn("JWT token is null or empty: {}", e.getMessage());
+        } catch (JwtException e) {
+            log.error("JWT processing failed: {}", e.getMessage());
+        }
+        return null;
     }
 
 }
