@@ -357,7 +357,7 @@ public class ABEController {
         if (userId == null) return ResponseEntity.status(401).build();
 
         try {
-            // Validation: Only allow sharing to tags present in Catalog (or ID: personal tags)
+            // Validation: Only allow sharing of tags present in Catalog (or ID: personal tags)
             if (req.targetPolicy != null && !req.targetPolicy.isEmpty()) {
                 Set<String> validAttributes = userService.listAttributeCatalog().stream()
                         .map(AttributeCatalog::getName)
@@ -448,6 +448,28 @@ public class ABEController {
         Integer userId = getUserIdFromHeader(authHeader);
         if (userId == null) return ResponseEntity.status(401).build();
         return ResponseEntity.ok(userService.listAttributeCatalog());
+    }
+
+    /**
+     * Returns the current user's ID and their assigned attributes.
+     * Useful for refreshing user state when an admin assigns new tags.
+     *
+     * @param authHeader The Authorization header containing the JWT token.
+     * @return A ResponseEntity containing the user ID and attributes.
+     */
+    @GetMapping("/my-attributes")
+    public ResponseEntity<Map<String, Object>> getMyAttributes(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Integer userId = getUserIdFromHeader(authHeader);
+        if (userId == null) return ResponseEntity.status(401).build();
+
+        User user = userService.getById(userId);
+        if (user == null) return ResponseEntity.status(404).build();
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("userId", user.getId());
+        res.put("attributes", user.getAttributes());
+        return ResponseEntity.ok(res);
     }
 
     /**

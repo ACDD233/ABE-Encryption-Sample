@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 
 /**
  * Implementation of the {@link UserService} providing concrete logic for user management and security.
- * This service coordinates with ABE and File services to ensure consistent cryptographic state.
+ * This service coordinates with ABE and File services to ensure a consistent cryptographic state.
  */
 @Service
 public class UserServiceImpl implements UserService {

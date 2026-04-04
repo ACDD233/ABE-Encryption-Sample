@@ -47,6 +47,17 @@ Create a new user account.
   }
   ```
 
+#### **Get My Attributes**
+Retrieve the current user's ID and assigned ABE attributes.
+- **Endpoint**: `GET /my-attributes`
+- **Response**:
+  ```json
+  {
+    "userId": 2,
+    "attributes": "ID:USER-uuid,Dep:Engineering"
+  }
+  ```
+
 ---
 
 ### 2. File & Directory Management

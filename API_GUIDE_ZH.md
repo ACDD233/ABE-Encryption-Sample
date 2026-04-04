@@ -47,6 +47,17 @@
   }
   ```
 
+#### **获取我的属性 (Get My Attributes)**
+检索当前用户的 ID 和已分配的 ABE 属性。
+- **端点**: `GET /my-attributes`
+- **响应**:
+  ```json
+  {
+    "userId": 2,
+    "attributes": "ID:USER-uuid,Dep:Engineering"
+  }
+  ```
+
 ---
 
 ### 2. 文件与目录管理
