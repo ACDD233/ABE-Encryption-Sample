@@ -5,6 +5,7 @@ import com.abe.clouddisk.mapper.*;
 import com.abe.clouddisk.service.ABEService;
 import com.abe.clouddisk.service.FileService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
  * Implementation of the {@link FileService} providing concrete logic for file and directory management.
  * This service handles metadata persistence, file system operations, and ABE policy propagation.
  */
+@Slf4j
 @Service
 public class FileServiceImpl implements FileService {
 
@@ -181,7 +183,11 @@ public class FileServiceImpl implements FileService {
             String filePath = item.getFilePath();
             if (filePath != null && !filePath.isEmpty()) {
                 if (fileMetadataMapper.selectCount(new QueryWrapper<FileMetadata>().eq("file_path", filePath)) <= 1) {
-                    try { Files.deleteIfExists(Paths.get(filePath)); } catch (IOException e) { e.printStackTrace(); }
+                    try {
+                        Files.deleteIfExists(Paths.get(filePath));
+                    } catch (IOException e) {
+                        log.error("Failed to delete physical file: {}", filePath, e);
+                    }
                 }
             }
             fileAbeDataMapper.deleteById(item.getId());

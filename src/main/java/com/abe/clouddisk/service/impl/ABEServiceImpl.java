@@ -10,6 +10,7 @@ import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
 import it.unisa.dia.gas.plaf.jpbc.pairing.a.TypeACurveGenerator;
 import it.unisa.dia.gas.plaf.jpbc.pairing.parameters.PropertiesParameters;
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +27,7 @@ import java.util.Objects;
  * Implementation of the {@link ABEService} providing concrete logic for Attribute-Based Encryption.
  * This implementation uses the JPBC library for bilinear pairings and AES/GCM for symmetric encryption.
  */
+@Slf4j
 @Service
 public class ABEServiceImpl implements ABEService {
 
@@ -58,7 +60,7 @@ public class ABEServiceImpl implements ABEService {
                 loadKeysFromData(data);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("ABE Service initialization failed", e);
         }
     }
 

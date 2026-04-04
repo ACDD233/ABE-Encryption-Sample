@@ -7,6 +7,7 @@ import com.abe.clouddisk.mapper.UserKeyMapper;
 import com.abe.clouddisk.service.ABEService;
 import com.abe.clouddisk.service.FileService;
 import com.abe.clouddisk.service.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
@@ -19,7 +20,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
  * Controller for handling Attribute-Based Encryption (ABE) related operations,
  * including user authentication, file encryption/decryption, and file system management.
  */
+@Slf4j
 @RestController
 @RequestMapping("/abe")
 @CrossOrigin(origins = "*")
@@ -181,8 +182,7 @@ public class ABEController {
             byte[] symmetricKey = Base64.getDecoder().decode(base64Key);
             ABEService.HybridCiphertext hc = abeService.encryptFileHybrid(file.getBytes(), symmetricKey, tagsArray);
 
-            File dir = new File(uploadDir);
-            if (!dir.exists()) dir.mkdirs();
+            Files.createDirectories(Paths.get(uploadDir));
 
             String uniqueFileName = UUID.randomUUID() + ".enc";
             String fullPath = Paths.get(uploadDir, uniqueFileName).toString();
@@ -213,7 +213,7 @@ public class ABEController {
             res.put("policyApplied", finalPolicyStr);
             return ResponseEntity.ok(res);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("File upload and encryption failed for ownerId: {}", authHeader, e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -672,7 +672,7 @@ public class ABEController {
                             .filename(fileMeta.getFilename(), java.nio.charset.StandardCharsets.UTF_8).build().toString())
                     .body(new ByteArrayResource(decryptedFile));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("File download or decryption failed for fileId: {}", fileId, e);
             return ResponseEntity.internalServerError().build();
         }
     }
