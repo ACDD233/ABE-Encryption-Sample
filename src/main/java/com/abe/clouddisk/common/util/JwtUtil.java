@@ -5,12 +5,16 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 /**
@@ -32,11 +36,35 @@ public class JwtUtil {
     private static final long EXPIRATION_TIME = 86400000; // 24 hours
 
     /**
-     * Constructs a new JwtUtil with a generated secret key.
+     * Constructs a new JwtUtil. 
+     * If a secret is provided in properties, it is used. Otherwise, a random key is generated.
+     * 
+     * @param secret the secret key string from properties
      */
-    public JwtUtil() {
-        // Updated for JJWT 0.12.x: Use standard HS256 key generation
-        this.secretKey = Jwts.SIG.HS256.key().build();
+    public JwtUtil(@Value("${jwt.secret:}") String secret) {
+        if (secret == null || secret.isBlank()) {
+            log.info("No JWT secret provided in configuration. Generating a random key for this session.");
+            this.secretKey = Jwts.SIG.HS256.key().build();
+        } else {
+            log.info("Using JWT secret from configuration.");
+            byte[] keyBytes;
+            try {
+                // Try to decode as Base64 first
+                keyBytes = Decoders.BASE64.decode(secret);
+            } catch (Exception e) {
+                // If not Base64, use raw UTF-8 bytes
+                keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+            }
+            
+            // Validate key length for HS256 (minimum 256 bits / 32 bytes)
+            if (keyBytes.length < 32) {
+                log.error("The configured JWT secret is too short (less than 32 bytes). " +
+                        "HS256 requires at least 256 bits. Falling back to a random key.");
+                this.secretKey = Jwts.SIG.HS256.key().build();
+            } else {
+                this.secretKey = Keys.hmacShaKeyFor(keyBytes);
+            }
+        }
     }
 
     /**
