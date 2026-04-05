@@ -1,21 +1,24 @@
 package com.abe.clouddisk.dto;
 
+import lombok.Data;
+
 /**
  * Data Transfer Object for user registration requests.
  */
+@Data
 public class RegisterRequest {
     /**
      * The desired username.
      */
-    public String username;
+    private String username;
 
     /**
      * The user's email address.
      */
-    public String email;
+    private String email;
 
     /**
      * The user's password.
      */
-    public String password;
+    private String password;
 }

@@ -99,10 +99,19 @@ Download a file and decrypt it using the user's ABE keys.
 - **Endpoint**: `POST /mkdir`
 - **Query Params**: `name`, `parentId`
 
-#### **Delete / Move / Copy**
+#### **Delete / Move / Copy / Rename**
 - **Delete**: `DELETE /delete/{id}`
 - **Move**: `POST /move?id=1&targetParentId=2`
 - **Copy**: `POST /copy?id=1&targetParentId=2`
+- **Rename**: 
+  - **Endpoint**: `POST /rename`
+  - **Body (JSON)**:
+    ```json
+    {
+      "fileId": 12,
+      "newName": "new_filename.txt"
+    }
+    ```
 
 ---
 

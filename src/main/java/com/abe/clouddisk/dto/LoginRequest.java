@@ -1,16 +1,19 @@
 package com.abe.clouddisk.dto;
 
+import lombok.Data;
+
 /**
  * Data Transfer Object for user login requests.
  */
+@Data
 public class LoginRequest {
     /**
      * The user's email address.
      */
-    public String email;
+    private String email;
 
     /**
      * The user's password.
      */
-    public String password;
+    private String password;
 }

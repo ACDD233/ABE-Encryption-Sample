@@ -291,6 +291,20 @@ public class FileServiceImpl implements FileService {
         updatePolicyValueRecursive(item, finalPolicy, userId);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
+    public void renameItem(Integer id, String newName, Integer userId) {
+        FileMetadata item = fileMetadataMapper.selectById(id);
+        if (item == null || !item.getOwnerId().equals(userId)) {
+            throw new RuntimeException("Unauthorized or not found.");
+        }
+        item.setFilename(newName);
+        fileMetadataMapper.updateById(item);
+    }
+
     // --- Private Smart Helper Methods ---
 
     /**

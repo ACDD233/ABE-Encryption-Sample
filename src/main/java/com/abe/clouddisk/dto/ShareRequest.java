@@ -1,16 +1,19 @@
 package com.abe.clouddisk.dto;
 
+import lombok.Data;
+
 /**
  * Data Transfer Object for file sharing requests.
  */
+@Data
 public class ShareRequest {
     /**
      * The unique identifier of the file to be shared.
      */
-    public Integer fileId;
+    private Integer fileId;
 
     /**
      * The ABE access policy defining who can access the shared file.
      */
-    public String targetPolicy;
+    private String targetPolicy;
 }

@@ -96,4 +96,13 @@ public interface FileService {
      * @param userId  The ID of the user performing the update.
      */
     void updateItemPolicy(Integer id, String newTags, Integer userId);
+
+    /**
+     * Renames a file or directory.
+     *
+     * @param id      The ID of the item to rename.
+     * @param newName The new name for the item.
+     * @param userId  The ID of the user performing the rename.
+     */
+    void renameItem(Integer id, String newName, Integer userId);
 }

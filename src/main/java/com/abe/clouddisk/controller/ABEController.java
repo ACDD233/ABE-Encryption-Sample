@@ -87,7 +87,7 @@ public class ABEController {
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest req) {
         try {
-            return ResponseEntity.ok(userService.login(req.email, req.password));
+            return ResponseEntity.ok(userService.login(req.getEmail(), req.getPassword()));
         } catch (Exception e) {
             Map<String, Object> res = new HashMap<>();
             res.put("error", e.getMessage());
@@ -104,7 +104,7 @@ public class ABEController {
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@RequestBody RegisterRequest req) {
         try {
-            return ResponseEntity.ok(userService.register(req.username, req.email, req.password));
+            return ResponseEntity.ok(userService.register(req.getUsername(), req.getEmail(), req.getPassword()));
         } catch (Exception e) {
             Map<String, Object> res = new HashMap<>();
             res.put("error", e.getMessage());
@@ -343,6 +343,32 @@ public class ABEController {
     }
 
     /**
+     * Renames a file or directory.
+     *
+     * @param req        The rename request containing the item ID and new name.
+     * @param authHeader The Authorization header containing the JWT token.
+     * @return A ResponseEntity indicating the status of the operation.
+     */
+    @PostMapping("/rename")
+    public ResponseEntity<Map<String, String>> renameItem(
+            @RequestBody RenameRequest req,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Integer userId = getUserIdFromHeader(authHeader);
+        if (userId == null) return ResponseEntity.status(401).build();
+
+        try {
+            fileService.renameItem(req.getFileId(), req.getNewName(), userId);
+            Map<String, String> res = new HashMap<>();
+            res.put("status", "success");
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            Map<String, String> res = new HashMap<>();
+            res.put("error", e.getMessage());
+            return ResponseEntity.status(403).body(res);
+        }
+    }
+
+    /**
      * Shares a file by updating its ABE access policy.
      *
      * @param req        The share request containing the file ID and target policy.
@@ -358,12 +384,12 @@ public class ABEController {
 
         try {
             // Validation: Only allow sharing of tags present in Catalog (or ID: personal tags)
-            if (req.targetPolicy != null && !req.targetPolicy.isEmpty()) {
+            if (req.getTargetPolicy() != null && !req.getTargetPolicy().isEmpty()) {
                 Set<String> validAttributes = userService.listAttributeCatalog().stream()
                         .map(AttributeCatalog::getName)
                         .collect(Collectors.toSet());
 
-                String[] tags = req.targetPolicy.split(",");
+                String[] tags = req.getTargetPolicy().split(",");
                 for (String t : tags) {
                     String trimmed = t.trim();
                     if (trimmed.isEmpty()) continue;
@@ -376,7 +402,7 @@ public class ABEController {
                 }
             }
 
-            fileService.shareFile(req.fileId, req.targetPolicy, userId);
+            fileService.shareFile(req.getFileId(), req.getTargetPolicy(), userId);
             Map<String, String> res = new HashMap<>();
             res.put("status", "success");
             return ResponseEntity.ok(res);
@@ -406,8 +432,8 @@ public class ABEController {
             Set<String> userOwnedSet = Arrays.stream(user.getAttributes().split(",")).map(String::trim).collect(Collectors.toSet());
             
             String validatedTags = "";
-            if (req.selectedTags != null && !req.selectedTags.isEmpty()) {
-                String[] requested = req.selectedTags.split(",");
+            if (req.getSelectedTags() != null && !req.getSelectedTags().isEmpty()) {
+                String[] requested = req.getSelectedTags().split(",");
                 List<String> validList = new ArrayList<>();
                 for (String t : requested) {
                     String trimmed = t.trim();
@@ -424,7 +450,7 @@ public class ABEController {
                 validatedTags = String.join(",", validList);
             }
 
-            fileService.updateItemPolicy(req.id, validatedTags, userId);
+            fileService.updateItemPolicy(req.getId(), validatedTags, userId);
             Map<String, String> res = new HashMap<>();
             res.put("status", "success");
             res.put("policyApplied", validatedTags);
@@ -532,10 +558,10 @@ public class ABEController {
         if (adminId == null) return ResponseEntity.status(401).build();
 
         try {
-            userService.assignAttributes(req.targetUserId, req.attributes, adminId);
+            userService.assignAttributes(req.getTargetUserId(), req.getAttributes(), adminId);
             Map<String, String> res = new HashMap<>();
             res.put("status", "success");
-            res.put("newAttributes", req.attributes);
+            res.put("newAttributes", req.getAttributes());
             return ResponseEntity.ok(res);
         } catch (Exception e) {
             Map<String, String> res = new HashMap<>();
@@ -559,7 +585,7 @@ public class ABEController {
         if (adminId == null) return ResponseEntity.status(401).build();
 
         try {
-            userService.addAttributeToCatalog(req.name, req.description, adminId);
+            userService.addAttributeToCatalog(req.getName(), req.getDescription(), adminId);
             Map<String, String> res = new HashMap<>();
             res.put("status", "success");
             return ResponseEntity.ok(res);
@@ -638,10 +664,21 @@ public class ABEController {
             }
 
             Map<String, Object> data = fileService.getFileAndAbeData(fileId);
-            if (data == null) return ResponseEntity.notFound().build();
+            if (data == null || data.get("file") == null) return ResponseEntity.notFound().build();
 
             FileMetadata fileMeta = (FileMetadata) data.get("file");
             FileAbeData abeData = (FileAbeData) data.get("abeData");
+
+            // Prevent downloading directories
+            if (Boolean.TRUE.equals(fileMeta.getIsDir())) {
+                return ResponseEntity.status(400).body(new ByteArrayResource("{\"error\": \"Cannot download a directory.\"}".getBytes()));
+            }
+
+
+            if (abeData == null) {
+                log.error("Encrypted key data missing for fileId: {}", fileId);
+                return ResponseEntity.status(500).build();
+            }
 
             ABEService.ABECiphertext abeCt = new ABEService.ABECiphertext();
             abeCt.encryptedSessionKey = abeData.getEncryptedSessionKey();

@@ -99,10 +99,19 @@
 - **端点**: `POST /mkdir`
 - **查询参数**: `name` (目录名), `parentId` (父目录 ID)
 
-#### **删除 / 移动 / 复制 (File Operations)**
+#### **删除 / 移动 / 复制 / 重命名 (File Operations)**
 - **删除**: `DELETE /delete/{id}`
 - **移动**: `POST /move?id=1&targetParentId=2`
 - **复制**: `POST /copy?id=1&targetParentId=2`
+- **重命名**: 
+  - **端点**: `POST /rename`
+  - **请求体 (JSON)**:
+    ```json
+    {
+      "fileId": 12,
+      "newName": "new_filename.txt"
+    }
+    ```
 
 ---
 
