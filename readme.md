@@ -32,6 +32,15 @@ DB_USER=abe_user
 DB_PASSWORD={Your MariaDB User Password}
 
 # JWT Configuration (Optional)
+# In the testing environment, this field can be left empty.
+# When the field is empty, a random 256-bit key will be generated each time the system restarts.
+# This will cause users' login sessions to be invalidated after every system restart.
+# In the production environment, it is recommended to set a fixed key here.
+# Please make sure to use a tool such as openssl to generate the key-
+# in order to ensure randomness and security.
+# (openssl rand -base64 32)
+# Expected key format: At least 256 bits (32 characters), entered here in Base64 format.
+
 JWT_SECRET=
 
 # Internal Paths (Do not change unless modifying Dockerfile)
