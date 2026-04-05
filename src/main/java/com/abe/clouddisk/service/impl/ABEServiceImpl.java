@@ -173,6 +173,9 @@ public class ABEServiceImpl implements ABEService {
      */
     @Override
     public ABECiphertext encryptSessionKey(byte[] sessionKeyBytes, String[] policy) throws Exception {
+        if (sessionKeyBytes == null || sessionKeyBytes.length != 32) {
+            throw new IllegalArgumentException("AES key must be exactly 32 bytes (256 bits) for AES-256.");
+        }
         Element s = pairing.getZr().newRandomElement().getImmutable();
         Element K_tilde = globalKeys.egg_alpha.powZn(s).getImmutable();
 
@@ -271,6 +274,9 @@ public class ABEServiceImpl implements ABEService {
      */
     @Override
     public HybridCiphertext encryptFileHybrid(byte[] fileBytes, byte[] symmetricKey, String[] policy) throws Exception {
+        if (symmetricKey == null || symmetricKey.length != 32) {
+            throw new IllegalArgumentException("AES key must be exactly 32 bytes (256 bits) for AES-256.");
+        }
         byte[] iv = new byte[12];
         new SecureRandom().nextBytes(iv);
         byte[] encryptedFile = encryptAES(fileBytes, symmetricKey, iv);
