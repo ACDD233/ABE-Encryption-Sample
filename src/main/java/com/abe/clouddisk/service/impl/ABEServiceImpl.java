@@ -105,7 +105,7 @@ public class ABEServiceImpl implements ABEService {
      */
     @Override
     public ABEKeys setup() {
-        TypeACurveGenerator gen = new TypeACurveGenerator(160, 512);
+        TypeACurveGenerator gen = new TypeACurveGenerator(256, 1536);
         this.pairingParameters = gen.generate();
         this.pairing = PairingFactory.getPairing(this.pairingParameters);
         this.g = pairing.getG1().newRandomElement().getImmutable();
