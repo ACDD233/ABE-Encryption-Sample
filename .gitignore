@@ -45,3 +45,4 @@ usage/
 uploads/
 *.logsrc/test/
 .DS_Store
+src/test
