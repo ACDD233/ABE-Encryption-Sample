@@ -43,4 +43,4 @@ mariadb_data/
 ### Self ###
 usage/
 uploads/
-*.log
+*.logsrc/test/
