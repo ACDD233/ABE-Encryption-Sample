@@ -44,3 +44,4 @@ mariadb_data/
 usage/
 uploads/
 *.logsrc/test/
+.DS_Store
