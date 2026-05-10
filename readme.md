@@ -66,6 +66,13 @@ Check logs to ensure everything is running:
 docker-compose logs -f app
 ```
 
+### 4. Run Tests (Optional)
+
+You can verify the system's integrity by running the automated test suite:
+```bash
+./mvnw test
+```
+
 ---
 
 ## Getting Started
@@ -80,6 +87,37 @@ Upon successful startup, the system initializes a default admin:
 2. **Assign Attributes**: As an admin, assign attributes (e.g., `Department:Finance`) to users.
 3. **Upload/Encrypt**: Upload a file with a specific access policy. The system generates an ABE-protected ciphertext.
 4. **Download/Decrypt**: Users can download and decrypt files only if their attributes satisfy the file's policy.
+
+---
+
+## Testing
+
+The project includes a comprehensive suite of automated tests covering both API endpoints and core cryptographic logic.
+
+### Prerequisites for Testing
+- JDK 21+
+- Maven (or use the provided `./mvnw`)
+
+### Running All Tests
+To run the entire test suite:
+```bash
+./mvnw test
+```
+
+### Test Categories
+
+1.  **API Controller Tests (`ABEControllerTest`)**:
+    - **Method**: Uses `MockMvc` and `@WebMvcTest`.
+    - **Purpose**: Verifies REST endpoints, parameter binding, security authorization, and JSON response formats.
+    - **Isolation**: All service layers and database mappers are mocked for high performance.
+
+2.  **ABE Logic Integration Tests (`ABEServiceTest`)**:
+    - **Method**: Uses `@SpringBootTest` with an **H2 In-Memory Database**.
+    - **Purpose**: Verifies the actual mathematical correctness of ABE encryption/decryption and AES-GCM integration.
+    - **Scenarios**: Includes tests for policy satisfaction (success) and policy mismatch (failure).
+
+### Test Configuration
+Tests use a separate profile defined in `src/test/resources/application-test.properties`, which automatically configures the H2 database and temporary upload paths.
 
 ---
 
