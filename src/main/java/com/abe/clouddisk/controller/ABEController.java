@@ -73,7 +73,9 @@ public class ABEController {
             return ResponseEntity.status(404).body(res);
         } else if (message.toLowerCase().contains("unauthorized") || message.toLowerCase().contains("login failed")) {
             return ResponseEntity.status(401).body(res);
-        } else if (message.toLowerCase().contains("permission denied") || message.toLowerCase().contains("access denied") || message.toLowerCase().contains("forbidden")) {
+        } else if (message.toLowerCase().contains("permission denied")
+                || message.toLowerCase().contains("access denied")
+                || message.toLowerCase().contains("forbidden")) {
             return ResponseEntity.status(403).body(res);
         }
 
@@ -91,6 +93,15 @@ public class ABEController {
         return ResponseEntity.ok(userService.register(req.getUsername(), req.getEmail(), req.getPassword()));
     }
 
+    /**
+     * Upload encrypted file and protect its AES key with ABE.
+     *
+     * Important change:
+     * - If the user selects group attributes such as "it", the final policy is exactly "it".
+     * - The uploader's own ID is NOT automatically added together with group attributes.
+     * - If no tag is selected, the file defaults to private and uses the uploader's ID tag.
+     * - Private share by ID is allowed, e.g. "ID:2".
+     */
     @PostMapping(value = "/encrypt-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> uploadAndEncrypt(
             @RequestPart("file") MultipartFile file,
@@ -100,17 +111,27 @@ public class ABEController {
             @RequestHeader(value = "Authorization", required = false) String authHeader) throws Exception {
 
         Integer ownerId = getUserIdFromHeader(authHeader);
-        if (ownerId == null) return ResponseEntity.status(401).build();
+        if (ownerId == null) {
+            return ResponseEntity.status(401).build();
+        }
 
         User user = userService.getById(ownerId);
-        if (user == null) return ResponseEntity.status(404).build();
+        if (user == null) {
+            return ResponseEntity.status(404).build();
+        }
 
-        Integer parentId = (parentIdStr != null && !parentIdStr.isEmpty()) ? Integer.parseInt(parentIdStr) : 0;
+        Integer parentId = (parentIdStr != null && !parentIdStr.isEmpty())
+                ? Integer.parseInt(parentIdStr)
+                : 0;
 
         String userAllAttrStr = user.getAttributes();
-        Set<String> userOwnedSet = (userAllAttrStr == null || userAllAttrStr.isEmpty()) 
-                ? new HashSet<>() 
-                : Arrays.stream(userAllAttrStr.split(",")).map(String::trim).collect(Collectors.toSet());
+
+        Set<String> userOwnedSet = (userAllAttrStr == null || userAllAttrStr.isEmpty())
+                ? new HashSet<>()
+                : Arrays.stream(userAllAttrStr.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .collect(Collectors.toSet());
 
         String identityTag = userOwnedSet.stream()
                 .filter(s -> s.startsWith("ID:"))
@@ -118,40 +139,82 @@ public class ABEController {
                 .orElse("");
 
         Set<String> finalTagsSet = new LinkedHashSet<>();
-        if (!identityTag.isEmpty()) finalTagsSet.add(identityTag);
 
+        /*
+         * 1. If the file is uploaded into a folder, inherit the parent folder policy.
+         */
         if (parentId != 0) {
             FileMetadata parent = (FileMetadata) fileService.getFileAndAbeData(parentId).get("file");
+
             if (parent != null && parent.getPolicy() != null) {
                 for (String pTag : parent.getPolicy().split(",")) {
                     String trimmed = pTag.trim();
-                    if (!trimmed.isEmpty()) finalTagsSet.add(trimmed);
+
+                    if (!trimmed.isEmpty()) {
+                        finalTagsSet.add(trimmed);
+                    }
                 }
             }
         }
 
-        if (selectedTags != null && !selectedTags.isEmpty()) {
+        /*
+         * 2. Add selected tags from frontend.
+         *
+         * Group share example:
+         * selectedTags = "it"
+         * final policy = "it"
+         *
+         * Private share example:
+         * selectedTags = "ID:2"
+         * final policy = "ID:2"
+         */
+        if (selectedTags != null && !selectedTags.trim().isEmpty()) {
             String[] requested = selectedTags.split(",");
+
             for (String reqTag : requested) {
                 String trimmedReq = reqTag.trim();
-                if (!trimmedReq.isEmpty() && !trimmedReq.startsWith("ID:")) {
-                    if (userOwnedSet.contains(trimmedReq)) {
-                        finalTagsSet.add(trimmedReq);
-                    }
+
+                if (trimmedReq.isEmpty()) {
+                    continue;
+                }
+
+                // Private share by user ID is allowed
+                if (trimmedReq.startsWith("ID:")) {
+                    finalTagsSet.add(trimmedReq);
+                    continue;
+                }
+
+                // Group sharing attribute must be owned by the uploader
+                if (userOwnedSet.contains(trimmedReq)) {
+                    finalTagsSet.add(trimmedReq);
+                } else {
+                    throw new RuntimeException(
+                            "Permission Denied: You do not possess the attribute: " + trimmedReq
+                    );
                 }
             }
+        }
+
+        /*
+         * 3. If no sharing policy was selected at all,
+         * default the file to private owner-only access.
+         */
+        if (finalTagsSet.isEmpty() && !identityTag.isEmpty()) {
+            finalTagsSet.add(identityTag);
         }
 
         String finalPolicyStr = String.join(",", finalTagsSet);
         String[] tagsArray = finalTagsSet.toArray(new String[0]);
 
         byte[] symmetricKey = Base64.getDecoder().decode(base64Key);
-        ABEService.HybridCiphertext hc = abeService.encryptFileHybrid(file.getBytes(), symmetricKey, tagsArray);
+        ABEService.HybridCiphertext hc =
+                abeService.encryptFileHybrid(file.getBytes(), symmetricKey, tagsArray);
 
         Files.createDirectories(Paths.get(uploadDir));
 
         String uniqueFileName = UUID.randomUUID() + ".enc";
         String fullPath = Paths.get(uploadDir, uniqueFileName).toString();
+
         try (FileOutputStream fos = new FileOutputStream(fullPath)) {
             fos.write(hc.aesEncryptedFile);
         }
@@ -177,6 +240,7 @@ public class ABEController {
         res.put("fileId", metadata.getId());
         res.put("status", "success");
         res.put("policyApplied", finalPolicyStr);
+
         return ResponseEntity.ok(res);
     }
 
@@ -185,7 +249,9 @@ public class ABEController {
             @RequestParam(value = "parentId", defaultValue = "0") Integer parentId,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Integer userId = getUserIdFromHeader(authHeader);
-        if (userId == null) return ResponseEntity.status(401).build();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
         return ResponseEntity.ok(fileService.listFiles(parentId, userId));
     }
 
@@ -195,7 +261,9 @@ public class ABEController {
             @RequestParam(value = "parentId", defaultValue = "0") Integer parentId,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Integer userId = getUserIdFromHeader(authHeader);
-        if (userId == null) return ResponseEntity.status(401).build();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
 
         User user = userService.getById(userId);
         String identityTag = Arrays.stream(user.getAttributes().split(","))
@@ -204,10 +272,12 @@ public class ABEController {
                 .orElse("");
 
         Integer id = fileService.createDirectory(name, parentId, identityTag, userId);
+
         Map<String, Object> res = new HashMap<>();
         res.put("status", "success");
         res.put("id", id);
         res.put("policyApplied", identityTag);
+
         return ResponseEntity.ok(res);
     }
 
@@ -216,11 +286,15 @@ public class ABEController {
             @PathVariable Integer id,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Integer userId = getUserIdFromHeader(authHeader);
-        if (userId == null) return ResponseEntity.status(401).build();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
 
         fileService.deleteItem(id, userId);
+
         Map<String, String> res = new HashMap<>();
         res.put("status", "success");
+
         return ResponseEntity.ok(res);
     }
 
@@ -230,10 +304,15 @@ public class ABEController {
             @RequestParam Integer targetParentId,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Integer userId = getUserIdFromHeader(authHeader);
-        if (userId == null) return ResponseEntity.status(401).build();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
         fileService.moveItem(id, targetParentId, userId);
+
         Map<String, String> res = new HashMap<>();
         res.put("status", "success");
+
         return ResponseEntity.ok(res);
     }
 
@@ -243,10 +322,15 @@ public class ABEController {
             @RequestParam Integer targetParentId,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Integer userId = getUserIdFromHeader(authHeader);
-        if (userId == null) return ResponseEntity.status(401).build();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
         fileService.copyItem(id, targetParentId, userId);
+
         Map<String, String> res = new HashMap<>();
         res.put("status", "success");
+
         return ResponseEntity.ok(res);
     }
 
@@ -255,11 +339,15 @@ public class ABEController {
             @RequestBody RenameRequest req,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Integer userId = getUserIdFromHeader(authHeader);
-        if (userId == null) return ResponseEntity.status(401).build();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
 
         fileService.renameItem(req.getFileId(), req.getNewName(), userId);
+
         Map<String, String> res = new HashMap<>();
         res.put("status", "success");
+
         return ResponseEntity.ok(res);
     }
 
@@ -268,7 +356,9 @@ public class ABEController {
             @RequestBody ShareRequest req,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Integer userId = getUserIdFromHeader(authHeader);
-        if (userId == null) return ResponseEntity.status(401).build();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
 
         if (req.getTargetPolicy() != null && !req.getTargetPolicy().isEmpty()) {
             Set<String> validAttributes = userService.listAttributeCatalog().stream()
@@ -276,18 +366,27 @@ public class ABEController {
                     .collect(Collectors.toSet());
 
             String[] tags = req.getTargetPolicy().split(",");
+
             for (String t : tags) {
                 String trimmed = t.trim();
-                if (trimmed.isEmpty()) continue;
+
+                if (trimmed.isEmpty()) {
+                    continue;
+                }
+
                 if (!trimmed.startsWith("ID:") && !validAttributes.contains(trimmed)) {
-                    throw new IllegalArgumentException("The attribute '" + trimmed + "' is not a valid system attribute.");
+                    throw new IllegalArgumentException(
+                            "The attribute '" + trimmed + "' is not a valid system attribute."
+                    );
                 }
             }
         }
 
         fileService.shareFile(req.getFileId(), req.getTargetPolicy(), userId);
+
         Map<String, String> res = new HashMap<>();
         res.put("status", "success");
+
         return ResponseEntity.ok(res);
     }
 
@@ -296,30 +395,48 @@ public class ABEController {
             @RequestBody UpdatePolicyRequest req,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Integer userId = getUserIdFromHeader(authHeader);
-        if (userId == null) return ResponseEntity.status(401).build();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
 
         User user = userService.getById(userId);
-        Set<String> userOwnedSet = Arrays.stream(user.getAttributes().split(",")).map(String::trim).collect(Collectors.toSet());
-        
+        Set<String> userOwnedSet = Arrays.stream(user.getAttributes().split(","))
+                .map(String::trim)
+                .collect(Collectors.toSet());
+
         String validatedTags = "";
+
         if (req.getSelectedTags() != null && !req.getSelectedTags().isEmpty()) {
             String[] requested = req.getSelectedTags().split(",");
             List<String> validList = new ArrayList<>();
+
             for (String t : requested) {
                 String trimmed = t.trim();
-                if (trimmed.isEmpty()) continue;
-                if (!userOwnedSet.contains(trimmed)) {
-                    throw new RuntimeException("Permission Denied: You do not possess the attribute: " + trimmed);
+
+                if (trimmed.isEmpty()) {
+                    continue;
                 }
-                if (!trimmed.startsWith("ID:")) validList.add(trimmed);
+
+                if (!userOwnedSet.contains(trimmed)) {
+                    throw new RuntimeException(
+                            "Permission Denied: You do not possess the attribute: " + trimmed
+                    );
+                }
+
+                if (!trimmed.startsWith("ID:")) {
+                    validList.add(trimmed);
+                }
             }
+
             validatedTags = String.join(",", validList);
         }
 
         fileService.updateItemPolicy(req.getId(), validatedTags, userId);
+
         Map<String, String> res = new HashMap<>();
         res.put("status", "success");
         res.put("policyApplied", validatedTags);
+
         return ResponseEntity.ok(res);
     }
 
@@ -327,7 +444,10 @@ public class ABEController {
     public ResponseEntity<List<AttributeCatalog>> listAttributes(
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Integer userId = getUserIdFromHeader(authHeader);
-        if (userId == null) return ResponseEntity.status(401).build();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
         return ResponseEntity.ok(userService.listAttributeCatalog());
     }
 
@@ -335,14 +455,19 @@ public class ABEController {
     public ResponseEntity<Map<String, Object>> getMyAttributes(
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Integer userId = getUserIdFromHeader(authHeader);
-        if (userId == null) return ResponseEntity.status(401).build();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
 
         User user = userService.getById(userId);
-        if (user == null) return ResponseEntity.status(404).build();
+        if (user == null) {
+            return ResponseEntity.status(404).build();
+        }
 
         Map<String, Object> res = new HashMap<>();
         res.put("userId", user.getId());
         res.put("attributes", user.getAttributes());
+
         return ResponseEntity.ok(res);
     }
 
@@ -350,7 +475,10 @@ public class ABEController {
     public ResponseEntity<List<User>> listAllUsers(
             @RequestHeader(value = "Authorization", required = false) String authHeader) throws Exception {
         Integer adminId = getUserIdFromHeader(authHeader);
-        if (adminId == null) return ResponseEntity.status(401).build();
+        if (adminId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
         return ResponseEntity.ok(userService.listAllUsers(adminId));
     }
 
@@ -359,10 +487,15 @@ public class ABEController {
             @PathVariable Integer id,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Integer adminId = getUserIdFromHeader(authHeader);
-        if (adminId == null) return ResponseEntity.status(401).build();
+        if (adminId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
         userService.deleteUser(id, adminId);
+
         Map<String, String> res = new HashMap<>();
         res.put("status", "success");
+
         return ResponseEntity.ok(res);
     }
 
@@ -371,10 +504,15 @@ public class ABEController {
             @RequestBody RegisterRequest req,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Integer adminId = getUserIdFromHeader(authHeader);
-        if (adminId == null) return ResponseEntity.status(401).build();
+        if (adminId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
         userService.createSubAdmin(req.getUsername(), req.getEmail(), req.getPassword(), adminId);
+
         Map<String, String> res = new HashMap<>();
         res.put("status", "success");
+
         return ResponseEntity.ok(res);
     }
 
@@ -383,11 +521,16 @@ public class ABEController {
             @RequestBody AssignAttributesRequest req,
             @RequestHeader(value = "Authorization", required = false) String authHeader) throws Exception {
         Integer adminId = getUserIdFromHeader(authHeader);
-        if (adminId == null) return ResponseEntity.status(401).build();
+        if (adminId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
         userService.assignAttributes(req.getTargetUserId(), req.getAttributes(), adminId);
+
         Map<String, String> res = new HashMap<>();
         res.put("status", "success");
         res.put("newAttributes", req.getAttributes());
+
         return ResponseEntity.ok(res);
     }
 
@@ -396,10 +539,15 @@ public class ABEController {
             @RequestBody AttributeRequest req,
             @RequestHeader(value = "Authorization", required = false) String authHeader) throws Exception {
         Integer adminId = getUserIdFromHeader(authHeader);
-        if (adminId == null) return ResponseEntity.status(401).build();
+        if (adminId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
         userService.addAttributeToCatalog(req.getName(), req.getDescription(), adminId);
+
         Map<String, String> res = new HashMap<>();
         res.put("status", "success");
+
         return ResponseEntity.ok(res);
     }
 
@@ -408,10 +556,15 @@ public class ABEController {
             @PathVariable Integer id,
             @RequestHeader(value = "Authorization", required = false) String authHeader) throws Exception {
         Integer adminId = getUserIdFromHeader(authHeader);
-        if (adminId == null) return ResponseEntity.status(401).build();
+        if (adminId == null) {
+            return ResponseEntity.status(401).build();
+        }
+
         userService.deleteAttributeFromCatalog(id, adminId);
+
         Map<String, String> res = new HashMap<>();
         res.put("status", "success");
+
         return ResponseEntity.ok(res);
     }
 
@@ -425,24 +578,34 @@ public class ABEController {
 
         Integer finalUserId = userIdParam;
         boolean isTokenAuth = false;
+
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             finalUserId = Integer.parseInt(jwtUtil.getUserIdFromToken(authHeader.substring(7)));
             isTokenAuth = true;
         }
 
         Map<String, Object> data = fileService.getFileAndAbeData(fileId);
-        if (data == null || data.get("file") == null) return ResponseEntity.notFound().build();
+
+        if (data == null || data.get("file") == null) {
+            return ResponseEntity.notFound().build();
+        }
 
         FileMetadata fileMeta = (FileMetadata) data.get("file");
         FileAbeData abeData = (FileAbeData) data.get("abeData");
 
-        if (Boolean.TRUE.equals(fileMeta.getIsDir())) throw new IllegalArgumentException("Cannot download a directory.");
-        if (abeData == null) throw new RuntimeException("Encrypted key data missing for this file.");
+        if (Boolean.TRUE.equals(fileMeta.getIsDir())) {
+            throw new IllegalArgumentException("Cannot download a directory.");
+        }
+
+        if (abeData == null) {
+            throw new RuntimeException("Encrypted key data missing for this file.");
+        }
 
         ABEService.ABECiphertext abeCt = new ABEService.ABECiphertext();
         abeCt.encryptedSessionKey = abeData.getEncryptedSessionKey();
         abeCt.tempCBytes = abeData.getCtC();
         abeCt.tempCPrimeBytes = abeData.getCtCPrime();
+
         if (fileMeta.getPolicy() != null) {
             for (String tag : fileMeta.getPolicy().split(",")) {
                 ABEService.CTComponent comp = new ABEService.CTComponent();
@@ -456,13 +619,18 @@ public class ABEController {
 
         if (finalUserId != null) {
             User user = userService.getById(finalUserId);
-            if (!isTokenAuth && (password == null || !passwordEncoder.matches(password, user.getPasswordHash()))) {
+
+            if (!isTokenAuth
+                    && (password == null || !passwordEncoder.matches(password, user.getPasswordHash()))) {
                 throw new RuntimeException("Unauthorized: Invalid user credentials.");
             }
+
             UserKey uk = userKeyMapper.selectById(finalUserId);
+
             ABEService.SecretKeyContainer sk = new ABEService.SecretKeyContainer();
             sk.D = abeService.getElementFromBytes(uk.getSkD(), "G1");
             sk.D_r = abeService.getElementFromBytes(uk.getSkDr(), "G1");
+
             if (user.getAttributes() != null) {
                 for (String attr : user.getAttributes().split(",")) {
                     ABEService.SKComponent comp = new ABEService.SKComponent();
@@ -470,27 +638,44 @@ public class ABEController {
                     sk.components.add(comp);
                 }
             }
+
             byte[] recoveredKey = abeService.decryptSessionKey(sk, abeCt);
-            if (recoveredKey == null) throw new RuntimeException("Permission Denied: Attributes mismatch.");
+
+            if (recoveredKey == null) {
+                throw new RuntimeException("Permission Denied: Attributes mismatch.");
+            }
+
             decryptedFile = abeService.decryptAES(encryptedFile, recoveredKey, fileMeta.getAesIv());
         } else {
             ABEService.HybridCiphertext hc = new ABEService.HybridCiphertext();
             hc.aesEncryptedFile = encryptedFile;
             hc.abeEncryptedKey = abeCt;
             hc.iv = fileMeta.getAesIv();
-            String[] attrArray = (userAttributes == null || userAttributes.isEmpty()) ? new String[0] : userAttributes.split(",");
+
+            String[] attrArray = (userAttributes == null || userAttributes.isEmpty())
+                    ? new String[0]
+                    : userAttributes.split(",");
+
             decryptedFile = abeService.decryptFileHybrid(hc, attrArray);
         }
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
-                        .filename(fileMeta.getFilename(), java.nio.charset.StandardCharsets.UTF_8).build().toString())
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment()
+                                .filename(fileMeta.getFilename(), java.nio.charset.StandardCharsets.UTF_8)
+                                .build()
+                                .toString()
+                )
                 .body(new ByteArrayResource(decryptedFile));
     }
 
     private Integer getUserIdFromHeader(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return null;
+        }
+
         try {
             return Integer.parseInt(jwtUtil.getUserIdFromToken(authHeader.substring(7)));
         } catch (Exception e) {
