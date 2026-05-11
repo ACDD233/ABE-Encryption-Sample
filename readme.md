@@ -2,6 +2,8 @@
 
 A secure cloud storage backend implementing **Attribute-Based Encryption (ABE)** and **Hybrid Encryption** (AES + ABE) using Spring Boot, MariaDB, and the JPBC library.
 
+## Looking for the frontend? Check out [SecureShare-web](https://github.com/xiaomizhoujiayu-wq/SecureShare-web).
+
 ## Features
 
 - **Ciphertext-Policy Attribute-Based Encryption (CP-ABE)**: Fine-grained access control where files are encrypted with a policy (e.g., `Dep:HR AND Role:Manager`).
