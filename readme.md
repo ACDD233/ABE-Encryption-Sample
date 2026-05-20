@@ -142,4 +142,4 @@ Detailed documentation on endpoints, parameters, and logic:
 - [中文接口指南 (Chinese API Guide)](API_GUIDE_ZH.md)
 
 ## License
-Apache License 2.0
+GNU General Public License v3.0
