@@ -2,7 +2,7 @@
 
 A secure cloud storage backend implementing **Attribute-Based Encryption (ABE)** and **Hybrid Encryption** (AES + ABE) using Spring Boot, MariaDB, and the JPBC library.
 
-## Looking for the frontend? Check out [SecureShare-web](https://github.com/xiaomizhoujiayu-wq/SecureShare-web).
+## Looking for the frontend? Check out [SecureShare-web](https://github.com/xiaomizhoujiayu-wq/SecureShare).
 
 ## Features
 
