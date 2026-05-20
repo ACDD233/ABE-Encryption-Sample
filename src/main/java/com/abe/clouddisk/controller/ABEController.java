@@ -34,7 +34,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestController
 @RequestMapping("/abe")
-@CrossOrigin(origins = "*")
+// @CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*", exposedHeaders = {"X-Session-Key", "Content-Disposition"})
 public class ABEController {
 
     @Autowired
@@ -616,6 +617,7 @@ public class ABEController {
 
         byte[] encryptedFile = Files.readAllBytes(Paths.get(fileMeta.getFilePath()));
         byte[] decryptedFile;
+        String frontendSessionKeyBase64 = null;
 
         if (finalUserId != null) {
             User user = userService.getById(finalUserId);
@@ -645,6 +647,10 @@ public class ABEController {
                 throw new RuntimeException("Permission Denied: Attributes mismatch.");
             }
 
+            // For frontend decryption use
+            frontendSessionKeyBase64 = Base64.getEncoder().encodeToString(recoveredKey);
+
+            // Backend decrypts the first layer it encrypted
             decryptedFile = abeService.decryptAES(encryptedFile, recoveredKey, fileMeta.getAesIv());
         } else {
             ABEService.HybridCiphertext hc = new ABEService.HybridCiphertext();
@@ -659,16 +665,21 @@ public class ABEController {
             decryptedFile = abeService.decryptFileHybrid(hc, attrArray);
         }
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(
-                        HttpHeaders.CONTENT_DISPOSITION,
-                        ContentDisposition.attachment()
-                                .filename(fileMeta.getFilename(), java.nio.charset.StandardCharsets.UTF_8)
-                                .build()
-                                .toString()
-                )
-                .body(new ByteArrayResource(decryptedFile));
+        ResponseEntity.BodyBuilder responseBuilder = ResponseEntity.ok()
+        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+        .header(
+                HttpHeaders.CONTENT_DISPOSITION,
+                ContentDisposition.attachment()
+                        .filename(fileMeta.getFilename(), java.nio.charset.StandardCharsets.UTF_8)
+                        .build()
+                        .toString()
+        );
+
+        if (frontendSessionKeyBase64 != null) {
+            responseBuilder.header("X-Session-Key", frontendSessionKeyBase64);
+        }
+
+        return responseBuilder.body(new ByteArrayResource(decryptedFile));
     }
 
     private Integer getUserIdFromHeader(String authHeader) {
