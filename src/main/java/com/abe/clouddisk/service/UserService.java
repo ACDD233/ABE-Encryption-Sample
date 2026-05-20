@@ -39,6 +39,17 @@ public interface UserService {
     User getById(Integer id);
     
     /**
+     * Admin only: Creates a new Sub-Admin in the system.
+     *
+     * @param username The username of the Sub-Admin.
+     * @param email    The email address of the Sub-Admin.
+     * @param password The raw password of the Sub-Admin.
+     * @param adminId  The ID of the administrator performing the operation.
+     * @return A map containing registration details.
+     */
+    Map<String, Object> createSubAdmin(String username, String email, String password, Integer adminId);
+
+    /**
      * Admin only: Assigns a new set of ABE attributes to a user and regenerates their secret keys.
      *
      * @param userId     The ID of the target user.

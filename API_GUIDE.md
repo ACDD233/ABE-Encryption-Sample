@@ -149,10 +149,27 @@ Overwrite the current ABE policy of a file or directory.
 
 These endpoints are only accessible by users with the `ADMIN` role.
 
+#### **Create Sub-Admin**
+Create a new user with the `SUB_ADMIN` role.
+- **Endpoint**: `POST /admin/subadmin`
+- **Body (JSON)**:
+  ```json
+  {
+    "username": "hr_admin",
+    "email": "hr_admin@example.com",
+    "password": "password123"
+  }
+  ```
+- **Privilege Logic**: 
+  - **Sub-Admins** can manage other users but within a restricted scope.
+  - They can only assign attributes to users that **they themselves possess**.
+  - They **cannot** create new attributes in the catalog or delete users.
+
 #### **List All Users**
 Retrieve a list of all registered users.
 - **Endpoint**: `GET /admin/users`
 - **Response**: `List<User>`
+- **Sub-Admin Behavior**: When called by a Sub-Admin, the list is filtered to only show regular users (excluding other Admins or Sub-Admins).
 
 #### **Delete User**
 Permanently remove a user and their associated files/keys.

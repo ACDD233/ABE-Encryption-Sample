@@ -34,8 +34,9 @@ public interface FileService {
      * @param parentId The ID of the parent directory.
      * @param policy   The ABE access policy for the directory.
      * @param ownerId  The ID of the user who owns the directory.
+     * @return The ID of the newly created directory.
      */
-    void createDirectory(String name, Integer parentId, String policy, Integer ownerId);
+    Integer createDirectory(String name, Integer parentId, String policy, Integer ownerId);
 
     /**
      * Lists files and directories within a specified parent directory for a given user.

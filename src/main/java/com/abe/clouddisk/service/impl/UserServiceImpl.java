@@ -57,6 +57,18 @@ public class UserServiceImpl implements UserService {
     /** Regex pattern for validating UUIDs. */
     private static final Pattern UUID_PATTERN = Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
 
+    private boolean isTagsSubset(String subsetStr, String supersetStr) {
+        Set<String> sub = Arrays.stream(subsetStr == null ? new String[0] : subsetStr.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty() && !s.startsWith("ID:"))
+                .collect(Collectors.toSet());
+        Set<String> sup = Arrays.stream(supersetStr == null ? new String[0] : supersetStr.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty() && !s.startsWith("ID:"))
+                .collect(Collectors.toSet());
+        return sup.containsAll(sub);
+    }
+
     /**
      * {@inheritDoc}
      * Also generates a unique identity attribute (ID:uuid) for the user and their initial ABE keys.
@@ -64,6 +76,16 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public Map<String, Object> register(String username, String email, String password) {
+        // Check if username already exists
+        if (userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username)) != null) {
+            throw new IllegalArgumentException("Username already exists: " + username);
+        }
+
+        // Check if email already exists
+        if (userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getEmail, email)) != null) {
+            throw new IllegalArgumentException("Email already exists: " + email);
+        }
+
         String userUuid = "ID:" + UUID.randomUUID();
         String hashedPassword = passwordEncoder.encode(password);
 
@@ -120,18 +142,76 @@ public class UserServiceImpl implements UserService {
 
     /**
      * {@inheritDoc}
+     */
+    @Override
+    @Transactional
+    public Map<String, Object> createSubAdmin(String username, String email, String password, Integer adminId) {
+        User admin = userMapper.selectById(adminId);
+        if (admin == null || !"ADMIN".equalsIgnoreCase(admin.getRole())) {
+            throw new RuntimeException("Unauthorized: Admin access required.");
+        }
+
+        // Check if username already exists
+        if (userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username)) != null) {
+            throw new IllegalArgumentException("Username already exists: " + username);
+        }
+
+        // Check if email already exists
+        if (userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getEmail, email)) != null) {
+            throw new IllegalArgumentException("Email already exists: " + email);
+        }
+
+        String userUuid = "ID:" + UUID.randomUUID();
+        String hashedPassword = passwordEncoder.encode(password);
+
+        User user = new User();
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setPasswordHash(hashedPassword);
+        user.setRole("SUB_ADMIN");
+        user.setAttributes(userUuid);
+        userMapper.insert(user);
+
+        ABEService.SecretKeyContainer sk = abeService.keygen(new String[]{userUuid});
+        UserKey userKey = new UserKey();
+        userKey.setUserId(user.getId());
+        userKey.setSkD(sk.getDBytes());
+        userKey.setSkDr(sk.getDrBytes());
+        userKeyMapper.insert(userKey);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("userId", user.getId());
+        result.put("username", username);
+        result.put("role", "SUB_ADMIN");
+        return result;
+    }
+
+    /**
+     * {@inheritDoc}
      * Validates that assigned attributes exist in the system catalog and regenerates the user's ABE secret keys.
      */
     @Override
     @Transactional
     public void assignAttributes(Integer userId, String extraAttributes, Integer adminId) {
         User admin = userMapper.selectById(adminId);
-        if (admin == null || !"ADMIN".equalsIgnoreCase(admin.getRole())) {
-            throw new RuntimeException("Unauthorized: Admin access required.");
+        if (admin == null || (!"ADMIN".equalsIgnoreCase(admin.getRole()) && !"SUB_ADMIN".equalsIgnoreCase(admin.getRole()))) {
+            throw new RuntimeException("Unauthorized: Admin or Sub-Admin access required.");
         }
 
         User targetUser = userMapper.selectById(userId);
         if (targetUser == null) throw new RuntimeException("Target user not found.");
+
+        if ("SUB_ADMIN".equalsIgnoreCase(admin.getRole())) {
+            if (!"USER".equalsIgnoreCase(targetUser.getRole())) {
+                throw new RuntimeException("Unauthorized: Sub-Admins can only manage normal users.");
+            }
+            if (!isTagsSubset(targetUser.getAttributes(), admin.getAttributes())) {
+                throw new RuntimeException("Unauthorized: User is not within your management scope.");
+            }
+            if (!isTagsSubset(extraAttributes, admin.getAttributes())) {
+                throw new RuntimeException("Unauthorized: You can only assign tags you possess.");
+            }
+        }
 
         // 1. Validation Logic: Only allow attributes present in the Catalog
         if (extraAttributes != null && !extraAttributes.isEmpty()) {
@@ -191,10 +271,16 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<User> listAllUsers(Integer adminId) {
         User admin = userMapper.selectById(adminId);
-        if (admin == null || !"ADMIN".equalsIgnoreCase(admin.getRole())) {
-            throw new RuntimeException("Unauthorized: Admin access required.");
+        if (admin == null || (!"ADMIN".equalsIgnoreCase(admin.getRole()) && !"SUB_ADMIN".equalsIgnoreCase(admin.getRole()))) {
+            throw new RuntimeException("Unauthorized: Admin or Sub-Admin access required.");
         }
-        return userMapper.selectList(null);
+        List<User> allUsers = userMapper.selectList(null);
+        if ("SUB_ADMIN".equalsIgnoreCase(admin.getRole())) {
+            return allUsers.stream()
+                    .filter(u -> "USER".equalsIgnoreCase(u.getRole()) && isTagsSubset(u.getAttributes(), admin.getAttributes()))
+                    .collect(Collectors.toList());
+        }
+        return allUsers;
     }
 
     /**
@@ -204,10 +290,10 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deleteUser(Integer targetUserId, Integer adminId) {
-        // 1. Admin permission check
+        // 1. Admin permission check - Only ADMIN role is allowed to delete users
         User admin = userMapper.selectById(adminId);
         if (admin == null || !"ADMIN".equalsIgnoreCase(admin.getRole())) {
-            throw new RuntimeException("Unauthorized: Admin access required.");
+            throw new RuntimeException("Unauthorized: Admin access required to delete users.");
         }
 
         // 2. Self-deletion protection
@@ -244,7 +330,12 @@ public class UserServiceImpl implements UserService {
         if (admin == null || !"ADMIN".equalsIgnoreCase(admin.getRole())) {
             throw new RuntimeException("Unauthorized: Admin access required.");
         }
-        
+
+        // Check if attribute already exists
+        if (attributeCatalogMapper.selectOne(new LambdaQueryWrapper<AttributeCatalog>().eq(AttributeCatalog::getName, name)) != null) {
+            throw new IllegalArgumentException("Attribute already exists: " + name);
+        }
+
         AttributeCatalog attr = new AttributeCatalog();
         attr.setName(name);
         attr.setDescription(description);

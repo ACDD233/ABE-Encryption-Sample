@@ -82,7 +82,7 @@ public class FileServiceImpl implements FileService {
      * Directories inherit policies from their parents and add an identity-based tag.
      */
     @Override
-    public void createDirectory(String name, Integer parentId, String policy, Integer ownerId) {
+    public Integer createDirectory(String name, Integer parentId, String policy, Integer ownerId) {
         String finalPolicy = policy;
         if (parentId != null && parentId != 0) {
             FileMetadata parent = fileMetadataMapper.selectById(parentId);
@@ -106,6 +106,7 @@ public class FileServiceImpl implements FileService {
         dir.setFilePath("");
         dir.setAesIv(new byte[16]);
         fileMetadataMapper.insert(dir);
+        return dir.getId();
     }
 
     /**
