@@ -360,6 +360,8 @@ public class UserServiceImpl implements UserService {
 
     /**
      * {@inheritDoc}
+     * Also removes the deleted attribute from all users who have it assigned,
+     * and regenerates their ABE secret keys to maintain cryptographic consistency.
      */
     @Override
     @Transactional
@@ -368,6 +370,54 @@ public class UserServiceImpl implements UserService {
         if (admin == null || !"ADMIN".equalsIgnoreCase(admin.getRole())) {
             throw new RuntimeException("Unauthorized: Admin access required.");
         }
+
+        // 1. Look up the attribute name before deleting from catalog
+        AttributeCatalog attribute = attributeCatalogMapper.selectById(attributeId);
+        if (attribute == null) {
+            throw new RuntimeException("Attribute not found with id: " + attributeId);
+        }
+        String attributeName = attribute.getName();
+
+        // 2. Remove this attribute from all users who have it assigned and regenerate their keys
+        List<User> allUsers = userMapper.selectList(null);
+        for (User user : allUsers) {
+            String userAttributes = user.getAttributes();
+            if (userAttributes == null || userAttributes.isEmpty()) {
+                continue;
+            }
+
+            List<String> attrList = Arrays.stream(userAttributes.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.toList());
+
+            if (!attrList.contains(attributeName)) {
+                continue;
+            }
+
+            // Remove the deleted attribute
+            List<String> updatedList = attrList.stream()
+                    .filter(a -> !a.equals(attributeName))
+                    .collect(Collectors.toList());
+
+            String updatedAttributes = String.join(",", updatedList);
+            user.setAttributes(updatedAttributes);
+            userMapper.updateById(user);
+
+            // Regenerate ABE keys with the updated attribute set
+            if (!updatedAttributes.isEmpty()) {
+                String[] attrArray = updatedAttributes.split(",");
+                ABEService.SecretKeyContainer sk = abeService.keygen(attrArray);
+                UserKey uk = userKeyMapper.selectById(user.getId());
+                if (uk != null) {
+                    uk.setSkD(sk.getDBytes());
+                    uk.setSkDr(sk.getDrBytes());
+                    userKeyMapper.updateById(uk);
+                }
+            }
+        }
+
+        // 3. Delete from catalog
         attributeCatalogMapper.deleteById(attributeId);
     }
 

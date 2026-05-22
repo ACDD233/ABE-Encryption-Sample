@@ -41,3 +41,5 @@ mariadb_data/
 usage/
 uploads/
 .DS_Store
+*.log
+.antigravitycli/
